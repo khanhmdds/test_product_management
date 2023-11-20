@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>LB COMPUTER</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!--===============================================================================================-->
+    <th:block th:replace="/layout/head :: head"></th:block>
+    <th:block th:replace="/layoutProduct/head :: head"></th:block>
+    <th:block th:replace="/layoutLogin/head :: head"></th:block>
+    <!--===============================================================================================-->
+</head>
+<body>
+
+<div class="limiter">
+    <div class="container-login100">
+        <div class="wrap-login100">
+            <div class="login100-form-title" style="background-image: url(/assets/thuvienlogin/images/bg-01.jpg);">
+					<span class="login100-form-title-1">
+						Sign In
+					</span>
+            </div>
+
+            <form class="login100-form validate-form" id="frmLogin">
+                <div class="wrap-input100 validate-input m-b-26" data-validate="Username is required">
+                    <span class="label-input100">Username</span>
+                    <input class="input100" type="text"  id="emailLogin" name="emailLogin" placeholder="Nhập email" required autofocus>
+                    <span class="focus-input100"></span>
+                </div>
+
+                <div class="wrap-input100 validate-input m-b-18" data-validate = "Password is required">
+                    <span class="label-input100">Password</span>
+                    <input class="input100" placeholder="Nhập mật khẩu" id = "passwordLogin" name = "passwordLogin" type="password"  required>
+                    <span class="focus-input100"></span>
+                </div>
+            </form>
+            <div class="row">
+                <div class="container-login100-form-btn col-7 ">
+                    <button class="login100-form-btn offset-md-6 " id="btnLogin"  value="Sign In" style=" background-color: #3535f8;">
+                        Login
+                    </button>
+                </div>
+                <div class="flex-sb-m w-full p-b-30 col-5">
+                    <div>
+                        <a href="/register" class="login100-form-btn  offset-md-0 ">
+                            SIGN UP
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<th:block th:replace="/layoutLogin/script :: script"></th:block>
+<th:block th:replace="/layout/script :: script"/>
+<th:block th:replace="/layoutProduct/script :: script"/>
+<script>
+    const page = {
+        urls: {
+            login: App.AUTH_URL + "/login",
+        },
+        elements: {},
+        commands: {},
+        initializeEventControl: {}
+    }
+
+    page.elements.frmLogin = $("#frmLogin");
+    page.elements.emailLogin = $("#emailLogin");
+    page.elements.passwordLogin = $("#passwordLogin");
+    page.elements.btnLogin = $("#btnLogin");
+
+    page.commands.login = () => {
+        let user = {
+            username: page.elements.emailLogin.val(),
+            password: page.elements.passwordLogin.val()
+        }
+        $.ajax({
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            type: "POST",
+            url: page.urls.login,
+            data: JSON.stringify(user)
+        }).done((resp) => {
+            let role = resp.roles[0].authority;
+            console.log(role)
+            App.SweetAlert.redirectPage("Đăng nhập thành công.", "<b></b>", 1000);
+
+            if (role === "ADMIN") {
+                setTimeout(function () {
+                    window.location.href = "/cp";
+                }, 1000);
+            }else {
+                if (role ==="USER"){
+                    setTimeout(function () {
+                        window.location.href = "/cp";
+                    }, 1000);
+                } else{
+                    setTimeout(function () {
+                        window.location.href = "/customers";
+                    }, 1000);
+                }
+            }
+
+        }).fail(function (jqXHR) {
+            if (jqXHR.responseJSON) {
+                if (jqXHR.responseJSON.message) {
+                    App.IziToast.showErrorAlertLeft(jqXHR.responseJSON.message);
+                } else {
+                    $.each(jqXHR.responseJSON, function (key, value) {
+                        App.IziToast.showErrorAlertLeft(value);
+                    });
+                }
+            } else {
+                App.IziToast.showErrorAlertLeft("Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại!");
+            }
+        });
+    }
+
+    function showPassword1() {
+        let password = document.querySelector("#passwordLogin");
+        if (password.type === "password") {
+            password.type = "text";
+        } else {
+            password.type = "password";
+        }
+    }
+
+    page.commands.loadData = () => {
+    }
+
+    page.initializeEventControl = () => {
+        page.elements.btnLogin.on("click", () => {
+            page.commands.login();
+        })
+    }
+
+    $(() => {
+        page.commands.loadData();
+        page.initializeEventControl();
+    });
+</script>
+
+</body>
+</html>

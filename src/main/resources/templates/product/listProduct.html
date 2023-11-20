@@ -1,0 +1,550 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>COMPUTER MANAGER</title>
+    <th:block th:replace="/layoutProduct/head :: head"/>
+    <th:block th:replace="/layout/head :: head"/>
+</head>
+<th:block th:replace="/layoutProduct/topbar :: topbar"/>
+<th:block th:replace="/layoutProduct/left-side-menu :: leftside"/>
+    <body class="fixed-left">
+        <!-- Begin page -->
+        <div class="page-wrapper">
+            <div id="wrapper">
+
+                <!-- Left Sidebar End -->
+
+                <!-- Start right Content here -->
+
+                <div class="loader hide">
+                    <div id="loading"></div>
+                </div>
+                <div class="content-page">
+                    <div class="content">
+
+                        <!-- Start Content-->
+                        <div class="container-fluid">
+
+                            <!-- start page title -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="page-title-box">
+                                        <h4 class="page-title">MANAGER COMPUTER</h4>
+                                        <div class="page-title-right">
+                                            <ol class="breadcrumb p-0 m-0">
+                                                <li class="breadcrumb-item"><a href="/cp">HOME</a></li>
+                                                <li class="breadcrumb-item"><a href="/cp/products/create">ADD NEW PRODUCT</a></li>
+                                                <li class="breadcrumb-item active">List Product</li>
+                                            </ol>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- end page title -->
+
+
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-body table-responsive">
+                                            <h4 class="m-t-0 header-title mb-4" style="color:#fff;"><b>Danh sách sản phẩm</b></h4>
+
+                                            <table id="tbProduct" class="table table-bordered dt-responsive nowrap"
+                                                   style="border-collapse: collapse; border-spacing: 0; width: 100%;">
+
+                                                <thead>
+                                                <tr class="bg-info text-white">
+                                                    <th class="text-center font-weight-bold">ID</th>
+                                                    <th class="text-center font-weight-bold">IMAGE</th>
+                                                    <th class="text-center font-weight-bold">TITLE</th>
+                                                    <th class="text-center font-weight-bold">PRICE $</th>
+                                                    <th class="text-center font-weight-bold">QUANTITY</th>
+                                                    <th class="text-center font-weight-bold">DESCRIPTION</th>
+                                                    <th:block th:if="${staff.user.role.code}=='ADMIN'">
+                                                        <th class="text-center font-weight-bold">ACTION</th>
+                                                    </th:block>
+
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end container-fluid -->
+                    </div>
+                    <!-- end content -->
+                </div>
+            </div>
+        </div>
+        <th:block th:replace="/product/modalUpdateProduct :: modalUpdateProduct"></th:block>
+                <!-- End Page content -->
+        <!-- jQuery  -->
+        <th:block th:replace="/layoutProduct/script :: script"/>
+        <script src="/assets/js/app.js"></script>
+        <script src="/assets/js/validate.js"></script>
+        <script>
+            const page = {
+                urls: {
+                    getAllProducts: App.PRODUCT_API,
+                    getProductById: App.PRODUCT_API,
+                    updateProduct: App.PRODUCT_API + "/update",
+                    deleteProduct: App.PRODUCT_API + "/delete",
+                },
+                elements: {},
+                loadData: {},
+                commands: {},
+                dialogs: {
+                    elements: {},
+                    loadData: {},
+                    commands: {},
+                    alertDanger: {}
+                },
+                initializeEventControl: {}
+            }
+
+            page.elements.staffRoleCode= $("#staffRoleCode");
+            page.elements.tbProduct = $("#tbProduct");
+            page.elements.tbProductBody = $("#tbProduct tbody");
+
+            page.dialogs.elements.modalUpdate = $("#modalUpdateProduct");
+            page.dialogs.elements.frmUpdate = $("#frmUpdate");
+            page.dialogs.elements.productName = $("#productName");
+            page.dialogs.elements.price = $("#price");
+            page.dialogs.elements.quantity = $("#quantity");
+            page.dialogs.elements.description = $("#description");
+            page.dialogs.elements.btnUpdate = $("#btnUpdate");
+
+            page.dialogs.elements.imageFileUp = $("#imageFileUp");
+            page.dialogs.elements.canvasUp = $("#canvasUp");
+            page.dialogs.elements.wrapper = $("#modalUpdateProduct section .wrappers");
+            page.dialogs.elements.wrapperContent = $("#modalUpdateProduct section .wrapper .content");
+            page.dialogs.elements.imagePreview = $("#modalUpdateProduct section .image-preview canvas");
+            page.dialogs.elements.imagePreview.css("display", "hide");
+            page.dialogs.elements.context = page.dialogs.elements.canvasUp[0].getContext('2d');
+            page.dialogs.elements.divImagePreview = $("#modalUpdateProduct div.image-preview, #modalUpdateProduct div.file-name");
+            page.dialogs.elements.btnClearImagePreview = $(".clear-image-preview i");
+
+            page.dialogs.alertDanger.frmUpdateProduct = $("#modalUpdateProduct .frm-alert-danger");
+
+            page.elements.loader = $(".loader");
+
+            let product = new Product();
+            let productAvatar = new ProductAvatar();
+
+
+
+            page.commands.getAllProducts = () => {
+                $.ajax({
+                    headers: {
+                        "accept": "application/json",
+                        "content-type": "application/json"
+                    },
+                    type: "GET",
+                    url: page.urls.getAllProducts
+                })
+                    .done((data) => {
+                        $.each(data, (i, item) => {
+                            product = item;
+                            productAvatar = product.productAvatar;
+                            page.elements.tbProductBody.prepend(page.commands.renderProduct(product, productAvatar));
+                        });
+
+                        page.commands.removeHandleShowModal();
+
+                        page.commands.handleShowGroupModal();
+                    })
+                    .fail((error) => {
+                        console.log(error);
+                    })
+            }
+
+            page.commands.renderProduct = (product, productAvatar) => {
+                let image_thumbnail = App.BASE_URL_CLOUD_IMAGE + "/" + App.SCALE_IMAGE_W600_H600_Q100 + "/" + "product_images" + "/" + productAvatar.fileName;
+                let htmls = `
+                <tr id="tr_${product.id}">
+                    <td>${product.id}</td>
+                    <td>
+                        <img src=${image_thumbnail} alt="${productAvatar.fileName}" class ="avatarListImageProduct">
+                    </td>
+                    <td>${product.productName}</td>
+                    <td class="text-right">
+                            ${new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', minimumFractionDigits: 0}).format(product.price)}
+                    </td>
+                    <td class="text-right">${product.quantity}</td>
+                    <td>${product.description}</td>
+                </tr> `
+                    ;
+                if(page.elements.staffRoleCode.val() === "ADMIN"){
+                    htmls =
+                        `<tr id="tr_${product.id}">
+                            <td>${product.id}</td>
+                            <td>
+                                <img src=${image_thumbnail} alt="${productAvatar.fileName}" class ="avatarListImageProduct">
+                            </td>
+                            <td>${product.productName}</td>
+                            <td class="text-right">
+                                ${new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', minimumFractionDigits: 0}).format(product.price)}
+                            </td>
+                            <td class="text-right">${product.quantity}</td>
+                            <td>${product.description}</td>
+                            <td class="text-center">
+                        <button data-id="${product.id}"
+                                data-avatar-id = "${productAvatar.id}"
+                                data-avatar-file-folder = "${productAvatar.fileFolder}"
+                                data-avatar-file-name = "${productAvatar.fileName}"
+                                class="btn btn-outline-primary update">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                       <button data-id="${product.id}"
+                        class="btn btn-outline-danger delete">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                        </td>
+                        </tr>`;
+                }
+                return htmls;
+            }
+
+
+
+            page.commands.handleShowUpdateModal = () => {
+                $(".update").on("click", function () {
+                    let id = $(this).data("id");
+                    let avatarFileFolder = $(this).data("avatar-file-folder");
+                    let avatarFileName = $(this).data("avatar-file-name");
+                    page.commands.getProductById(id).done((data) => {
+
+                        let avatarUrl = App.BASE_URL_CLOUD_IMAGE + "/" + App.SCALE_IMAGE_W600_H600_Q100 + "/" + avatarFileFolder + "/" + avatarFileName;
+                        page.dialogs.commands.loadImageToCanvasUp(null, "", avatarUrl);
+                        product = data;
+                        productAvatar = product.productAvatar;
+                        page.dialogs.elements.productName.val(product.productName);
+                        page.dialogs.elements.price.val(product.price);
+                        page.dialogs.elements.quantity.val(product.quantity);
+                        page.dialogs.elements.description.val(product.description);
+                        page.dialogs.elements.modalUpdate.modal('show');
+                    })
+                })
+            }
+
+            page.dialogs.elements.frmUpdate.validate({
+                rules: {
+                    productName: {
+                        required: true,
+                        minlength: 5,
+                        maxlength: 50
+                    },
+                    price: {
+                        required: true,
+                        min: 100000,
+                        max: 999999999,
+                        number: true
+                    },
+                    quantity: {
+                        required: true,
+                        min: 1,
+                        max: 999999,
+                        number: true
+                    },
+                    description: {
+                        required: true,
+                        minlength: 5,
+                        maxlength: 200
+                    }
+                },
+                messages: {
+                    productName: {
+                        required: "Vui lòng nhập tên sản phẩm.",
+                        minlength: "Tên sản phẩm có độ dài tối thiểu là 5 ký tự.",
+                        maxlength: "Tên sản phẩm có độ dài tối đa là 100 ký tự."
+                    },
+                    price: {
+                        required: "Vui lòng nhập giá.",
+                        min: "Giá sản phẩm tối thiểu là 100.000 $.",
+                        max: "Giá sản phẩm tối đa là 999.999.999 $.",
+                        number: "Giá sản phẩm phải là số."
+                    },
+                    quantity: {
+                        required: "Vui lòng nhập số lượng.",
+                        min: "Số lượng tối thiểu là 1 sản phẩm.",
+                        max: "Số lượng tối thiểu là 999.999 sản phẩm.",
+                        number: "Số lượng phải là số."
+                    },
+                    description: {
+                        required: "Vui lòng nhập mô tả.",
+                        minlength: "Mô tả có độ dài tối thiểu là 5 ký tự.",
+                        maxlength: "Mô tả có độ dài tối đa là 200 ký tự."
+                    }
+                },
+                errorLabelContainer: "#frmUpdate .frm-alert-danger",
+                errorPlacement: function (error) {
+                    error.appendTo("#frmUpdate .frm-alert-danger");
+                },
+                showErrors: function () {
+                    if (this.numberOfInvalids() > 0) {
+                        page.dialogs.alertDanger.frmUpdateProduct.removeClass("hide").addClass("show");
+                    } else {
+                        page.dialogs.alertDanger.frmUpdateProduct.removeClass("show").addClass("hide").empty();
+                        $("#frmUpdate input.error").removeClass("error");
+                    }
+                    this.defaultShowErrors();
+                },
+                submitHandler: function () {
+                    product.productName = page.dialogs.elements.productName.val();
+                    product.price = page.dialogs.elements.price.val();
+                    product.quantity = page.dialogs.elements.quantity.val();
+                    product.description = page.dialogs.elements.description.val();
+
+                    let formData = new FormData();
+                    formData.append("productName", product.productName);
+                    formData.append("price", product.price);
+                    formData.append("quantity", product.quantity);
+                    formData.append("description", product.description);
+                    formData.append("file", page.dialogs.elements.imageFileUp[0].files[0]);
+
+                    page.commands.doUpdateProduct(formData);
+                }
+            })
+
+            page.commands.doUpdateProduct = (formData) => {
+                page.commands.showLoading();
+                $.ajax({
+                    type: "PATCH",
+                    contentType: false,
+                    cache: false,
+                    processData: false,
+                    url: page.urls.updateProduct + "/" + product.id,
+                    data: formData
+                })
+                    .done((data) => {
+                        product = data;
+                        productAvatar = product.productAvatar;
+                        let str = page.commands.renderProduct(product, productAvatar);
+                        let updateRow = $("#tr_" + product.id);
+                        updateRow.replaceWith(str);
+
+                        page.commands.removeHandleShowModal();
+                        page.commands.handleShowGroupModal();
+                        page.dialogs.elements.modalUpdate.modal("hide");
+                        App.IziToast.showSuccessAlertLeft("Chỉnh sửa sản phẩm <b>'" + product.productName + "'</b> thành công.")
+                    }).fail((jqXHR) => {
+                    let str = ``;
+                    console.log('jqXHR: ', jqXHR.responseJSON);
+                    if (jqXHR.status === 401) {
+                       window.location.href = "/401"
+                        // App.SweetAlert.showError401();
+                    } else {
+                        if (jqXHR.status === 403) {
+                            App.SweetAlert.showError403();
+                        } else {
+                            if (jqXHR.responseJSON) {
+                                if (jqXHR.responseJSON.message) {
+                                    str += `<label id="message-error" class="error" for="message">${jqXHR.responseJSON.description}</label>`;
+                                } else {
+                                    $.each(jqXHR.responseJSON, (key, value) => {
+                                        str += `<label id="${key}-error" class="error" for="${key}">${value}</label>`;
+                                        $("#" + key).addClass("error");
+                                    });
+                                }
+                                page.dialogs.alertDanger.frmUpdateProduct.removeClass("hide").addClass("show");
+                                page.dialogs.alertDanger.frmUpdateProduct.css("display", "block")
+                                page.dialogs.alertDanger.frmUpdateProduct.append(str);
+                            } else {
+                                App.SweetAlert.showError500();
+                            }
+                        }
+                    }
+                }).always(function () {
+                    page.commands.closeLoading();
+                })
+            }
+
+
+
+            page.dialogs.commands.loadImageToCanvasUp = (imageFile, fileType, imageUrl) => {
+                page.dialogs.elements.imagePreview.css("display", "");
+                page.dialogs.elements.wrapper.addClass("active");
+                page.dialogs.elements.wrapperContent.css("opacity", 0);
+
+                let imageObj = new Image();
+
+                imageObj.onload = function () {
+                    page.dialogs.elements.context.canvas.width = imageObj.width;
+                    page.dialogs.elements.context.canvas.height = imageObj.height;
+                    page.dialogs.elements.context.drawImage(imageObj, 0, 0, imageObj.width, imageObj.height);
+                };
+                if (fileType === "BINARY") {
+                    imageObj.src = URL.createObjectURL(imageFile);
+                } else {
+                    imageObj.src = imageUrl;
+                }
+            }
+
+            page.dialogs.commands.changeImagePreview = () => {
+                let imageFile = page.dialogs.elements.imageFileUp[0].files[0];
+                if (imageFile) {
+                    let reader = new FileReader();
+                    reader.readAsDataURL(imageFile);
+                    reader.onload = function (e) {
+                        if (e.target.readyState === FileReader.DONE) {
+                            page.dialogs.commands.loadImageToCanvasUp(imageFile, "BINARY", null);
+                        }
+                    }
+                } else {
+                    page.dialogs.elements.clearImagePreview();
+                }
+            }
+
+            page.dialogs.elements.clearImagePreview = () => {
+                page.dialogs.elements.imageFileUp.val("");
+                page.dialogs.elements.imagePreview.css("display", "none");
+                page.dialogs.elements.wrapper.removeClass("active");
+                page.dialogs.elements.wrapperContent.css("opacity", 1);
+            }
+
+            page.commands.showLoading = () => {
+                page.elements.loader.removeClass("hide");
+                page.dialogs.elements.btnUpdate.prop('disabled', true);
+            }
+
+
+            page.commands.closeLoading = () => {
+                page.elements.loader.addClass("hide");
+                page.dialogs.elements.btnUpdate.prop('disabled', false);
+            }
+
+            page.commands.handleShowConfirmDelete = () => {
+                $(".delete").on("click", function () {
+                    let id = $(this).data("id");
+                    page.commands.getProductById(id).then(() => {
+                        Swal.fire({
+                            title: 'Are you sure?',
+                            text: "You won't be able to revert this!",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Yes, delete it!'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                page.commands.doDeleteProduct(id)
+                            }
+                        })
+                    })
+                });
+            }
+
+            page.commands.doDeleteProduct = (productId) => {
+                $.ajax({
+                    headers: {
+                        "accept": "application/json",
+                        "content-type": "application/json"
+                    },
+                    type: "DELETE",
+                    url: page.urls.deleteProduct + "/" + productId,
+                    data: JSON.stringify(productId)
+                })
+                    .done(() => {
+                        $("#tr_" + productId).remove();
+                        App.IziToast.showSuccessAlertLeft("Xóa sản phẩm <b>'" + product.productName + "'</b> thành công");
+                    })
+                    .fail((jqXHR) => {
+                        if (jqXHR.status === 401) {
+                            App.SweetAlert.showError401();
+                        } else {
+                            if (jqXHR.status === 403) {
+                                App.SweetAlert.showError403();
+                            } else {
+                                if (jqXHR.responseJSON.message) {
+                                    console.log(jqXHR.responseJSON.message)
+                                    App.SweetAlert.showErrorAlert(jqXHR.responseJSON.message);
+                                } else {
+                                    App.SweetAlert.showError500();
+                                }
+                            }
+                        }
+                    })
+            }
+
+            page.commands.getProductById = (productId) => {
+                return $.ajax({
+                    type: "GET",
+                    url: page.urls.getProductById + "/" + productId
+                }).done((data) => {
+                    product = data;
+                })
+                    .fail((jqXHR) => {
+                        let errors = jqXHR.responseJSON;
+                        if (errors) {
+                            let str = "";
+                            $.each(errors, (k, v) => {
+                                str += `
+                            ${v}
+                        `;
+                            })
+                            App.SweetAlert.showErrorAlert(str);
+                        }
+                    })
+            }
+
+            page.commands.handleShowGroupModal = () => {
+                page.commands.handleShowConfirmDelete();
+                page.commands.handleShowUpdateModal();
+            }
+
+            page.commands.removeHandleShowModal = () => {
+                $(".edit").off("click");
+                $(".delete").off("click");
+            }
+
+            page.dialogs.commands.handleCloseUpdateModal = () => {
+                page.dialogs.elements.frmUpdate.find("input.error").removeClass("error");
+                page.dialogs.elements.frmUpdate[0].reset();
+                page.dialogs.elements.frmUpdate.validate().resetForm();
+                page.dialogs.elements.clearImagePreview();
+            }
+
+            page.commands.loadData = () => {
+                page.commands.getAllProducts();
+            }
+
+            page.initializeEventControl = () => {
+                page.commands.handleShowGroupModal();
+
+                page.dialogs.elements.btnUpdate.on("click", () => {
+                    page.dialogs.elements.frmUpdate.submit();
+                });
+
+                page.dialogs.elements.divImagePreview.on("click", function () {
+                    page.dialogs.elements.imageFileUp.trigger("click");
+                });
+
+                page.dialogs.elements.imageFileUp.on("change", function () {
+                    page.dialogs.commands.changeImagePreview();
+                });
+
+                // page.dialogs.elements.divImagePreview.on("click", function () {
+                //     page.dialogs.elements.imageFileUp.trigger("click");
+                // });
+
+                page.dialogs.elements.btnClearImagePreview.on("click", function () {
+                    page.dialogs.elements.clearImagePreview();
+                });
+
+                page.dialogs.elements.modalUpdate.on("hide.bs.modal", function () {
+                    page.dialogs.commands.handleCloseUpdateModal();
+                });
+            }
+            $(() => {
+                page.commands.loadData();
+                page.initializeEventControl();
+            });
+        </script>
+    </body>
+</html>
